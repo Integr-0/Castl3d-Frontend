@@ -1,6 +1,6 @@
-import React, {createContext, useEffect, useRef, useState} from "react";
+import React, {createContext, useState} from "react";
 import ChessRow from "./ChessRow.tsx";
-import {BISHOP, BLACK, KING, KNIGHT, NO_COLOR, NONE, PAWN, QUEEN, ROOK, WHITE} from "./Pieces.tsx";
+import {NO_COLOR, NONE} from "./Pieces.tsx";
 import {getValidMoves} from "../utils/MoveUtil.tsx";
 
 export const ClickContext = createContext<((x: number, y: number) => void) | undefined>(undefined);
@@ -10,16 +10,44 @@ export default function ChessBoard({style, className, backendSocketUrl}: {style?
     const [fields, setFields] = useState<ChessFieldData[][]>(Array.from({length: 8}, () => Array.from({length: 8}, () => ({
         highlighted: false, circled: false, selected: false, piece: {piece: NONE, color: NO_COLOR, moveCount: 0, hasJustMoved: false}
     }))));
+    
+    const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
 
     const init = () => {
         clearHighlights();
         clearPieces();
 
-        putPiece(0, 7, ROOK, WHITE, 0, false);
-        putPiece(3, 7, KING, WHITE, 0, false);
-        putPiece(7, 7, ROOK, WHITE, 0, false);
-        putPiece(4, 0, ROOK, BLACK, 0, false);
-        putPiece(4, 6, PAWN, WHITE, 0, false);
+        const newWebsocket = new WebSocket(backendSocketUrl);
+        newWebsocket.onclose = () => {
+            onWsConnect()
+        }
+
+        newWebsocket.onopen = () => {
+            onWsDisconnect()
+        }
+
+        newWebsocket.onmessage = (event) => {
+            onWsMessage(event)
+        }
+
+        setWebSocket(newWebsocket);
+    }
+
+    const onWsConnect = () => {
+        console.log("WebSocket connected");
+    }
+
+    const onWsDisconnect = () => {
+        console.log("WebSocket disconnected");
+    }
+
+    const onWsMessage = (event: MessageEvent) => {
+        const data = JSON.parse(event.data);
+        console.log(data);
+    }
+
+    const onMove = (fromX: number, fromY: number, toX: number, toY: number) => {
+        webSocket?.send(JSON.stringify({}))
     }
 
     const [selX, setSelX] = useState(-1);
@@ -31,6 +59,7 @@ export default function ChessBoard({style, className, backendSocketUrl}: {style?
 
             if (moves.find(move => move[0] == x && move[1] == y) != null) {
                 console.log(`Move [${fields[selX][selY].piece.color} :: ${fields[selX][selY].piece.piece}] from ${selX}, ${selY} to ${x}, ${y}`);
+                onMove(selX, selY, x, y);
                 clearHighlights();
                 return;
             }
