@@ -1,6 +1,6 @@
-import React, {createContext, useState} from "react";
+import React, {createContext, useEffect, useState} from "react";
 import ChessRow from "./ChessRow.tsx";
-import {NO_COLOR, NONE} from "./Pieces.tsx";
+import {BLACK, KING, NO_COLOR, NONE} from "./Pieces.tsx";
 import {getValidMoves} from "../utils/MoveUtil.tsx";
 
 export const ClickContext = createContext<((x: number, y: number) => void) | undefined>(undefined);
@@ -10,7 +10,6 @@ export default function ChessBoard({style, className, backendSocketUrl}: {style?
     const [fields, setFields] = useState<ChessFieldData[][]>(Array.from({length: 8}, () => Array.from({length: 8}, () => ({
         highlighted: false, circled: false, selected: false, piece: {piece: NONE, color: NO_COLOR, moveCount: 0, hasJustMoved: false}
     }))));
-    
     const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
 
     const init = () => {
@@ -32,6 +31,10 @@ export default function ChessBoard({style, className, backendSocketUrl}: {style?
 
         setWebSocket(newWebsocket);
     }
+
+    useEffect(() => {
+        init();
+    }, [backendSocketUrl]);
 
     const onWsConnect = () => {
         console.log("WebSocket connected");
@@ -100,6 +103,7 @@ export default function ChessBoard({style, className, backendSocketUrl}: {style?
                 newFields[i][j].piece.moveCount = 0;
             }
         }
+
         setFields(newFields);
     }
 
@@ -129,7 +133,6 @@ export default function ChessBoard({style, className, backendSocketUrl}: {style?
 
     return (
         <div className={className} style={style}>
-            <button onClick={init}>Init</button>
             <table className={"chess-board"}>
                 <tbody>
                     <ClickContext.Provider value={onClick}>
