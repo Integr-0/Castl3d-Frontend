@@ -9,3 +9,4 @@ export const NONE = -1;
 export const WHITE = 10
 export const BLACK = 11
 export const NO_COLOR = 12
+export const ANY_COLOR = 13

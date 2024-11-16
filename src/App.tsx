@@ -7,7 +7,7 @@ function App() {
     return (
         <>
             <div className="center">
-                <ChessBoard backendSocketUrl={`wss://castl3d.com/play_bot?bot=${currentBot}`}/>
+                <ChessBoard backendSocketUrl={"ws://localhost:8080/bot_socket"} botId={currentBot}/>
                 <BotSelector setCallback={selectedBot => setCurrentBot(selectedBot)}/>
             </div>
         </>

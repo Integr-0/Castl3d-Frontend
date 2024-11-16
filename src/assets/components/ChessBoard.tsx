@@ -1,56 +1,112 @@
 import React, {createContext, useEffect, useState} from "react";
 import ChessRow from "./ChessRow.tsx";
-import {BLACK, KING, NO_COLOR, NONE} from "./Pieces.tsx";
+import {ANY_COLOR, BLACK, NO_COLOR, NONE, WHITE} from "./Pieces.tsx";
 import {getValidMoves} from "../utils/MoveUtil.tsx";
+import {CompatClient, IMessage, Stomp} from "@stomp/stompjs";
+
 
 export const ClickContext = createContext<((x: number, y: number) => void) | undefined>(undefined);
 export const FieldContext = createContext<ChessFieldData[][] | undefined>(undefined);
 
-export default function ChessBoard({style, className, backendSocketUrl}: {style?: React.CSSProperties | undefined, className?: string | undefined, backendSocketUrl: string}) {
+export default function ChessBoard({style, className, backendSocketUrl, botId}: {style?: React.CSSProperties | undefined, className?: string | undefined, backendSocketUrl: string, botId: string}) {
     const [fields, setFields] = useState<ChessFieldData[][]>(Array.from({length: 8}, () => Array.from({length: 8}, () => ({
         highlighted: false, circled: false, selected: false, piece: {piece: NONE, color: NO_COLOR, moveCount: 0, hasJustMoved: false}
     }))));
-    const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
+
+    const [stompClient, setStompClient] = useState<CompatClient | null>(null);
+
+    const userColor = WHITE;
 
     const init = () => {
+        stompClient?.disconnect();
+
         clearHighlights();
         clearPieces();
 
-        const newWebsocket = new WebSocket(backendSocketUrl);
-        newWebsocket.onclose = () => {
-            onWsConnect()
-        }
+        const socket = new WebSocket(backendSocketUrl);
+        const newStompClient = Stomp.over(socket);
+        newStompClient.debug = function() { }
 
-        newWebsocket.onopen = () => {
+        newStompClient.connect({}, () => {
+            onWsConnect();
+
+            newStompClient.subscribe("/user/private/receiver/set_board", (data) => {
+                onWsSetBoard(data)
+            });
+
+            newStompClient.subscribe("/user/private/receiver/debug", (data) => {
+                onWsDebug(data)
+            });
+
+            newStompClient.subscribe("/user/private/receiver/game_end", (data) => {
+                onWsGameEnd(data)
+            });
+
+            newStompClient.publish({
+                    destination: "/app/start_game",
+                    body: JSON.stringify({
+                        botId: botId
+                    })
+                }
+            )
+
+        }, () => {
+            onWsError()
+        }, () => {
             onWsDisconnect()
-        }
+        });
 
-        newWebsocket.onmessage = (event) => {
-            onWsMessage(event)
-        }
-
-        setWebSocket(newWebsocket);
+        setStompClient(newStompClient);
     }
 
     useEffect(() => {
         init();
-    }, [backendSocketUrl]);
+    }, [backendSocketUrl, botId]);
 
     const onWsConnect = () => {
-        console.log("WebSocket connected");
+        console.log(`WebSocket [${backendSocketUrl}] connected!`);
     }
 
     const onWsDisconnect = () => {
-        console.log("WebSocket disconnected");
+        console.log(`WebSocket [${backendSocketUrl}] disconnected!`);
     }
 
-    const onWsMessage = (event: MessageEvent) => {
-        const data = JSON.parse(event.data);
-        console.log(data);
+    const onWsError = () => {
+        console.log(`WebSocket [${backendSocketUrl}] errored!`);
+    }
+
+    const onWsSetBoard = (data: IMessage) => {
+        const dataObj = JSON.parse(data.body);
+
+        putPiece(dataObj.x, dataObj.y, dataObj.piece, dataObj.color, dataObj.moveCount, dataObj.hasJustMoved);
+    }
+
+    const onWsDebug = (data: IMessage) => {
+        const dataObj = JSON.parse(data.body);
+        console.log(dataObj.message);
+    }
+
+    const onWsGameEnd = (data: IMessage) => {
+        const dataObj = JSON.parse(data.body);
+
+        if (dataObj.winner == ANY_COLOR) {
+            alert("Game ended in a draw");
+        } else {
+            alert(`Game ended, winner is ${dataObj.winner == BLACK ? "black" : "white"}`);
+        }
     }
 
     const onMove = (fromX: number, fromY: number, toX: number, toY: number) => {
-        webSocket?.send(JSON.stringify({}))
+        stompClient?.publish({
+                destination: "/app/move",
+                body: JSON.stringify({
+                    fromX: fromX,
+                    fromY: fromY,
+                    toX: toX,
+                    toY: toY
+                })
+            }
+        )
     }
 
     const [selX, setSelX] = useState(-1);
@@ -61,14 +117,18 @@ export default function ChessBoard({style, className, backendSocketUrl}: {style?
             const moves = getValidMoves(selX, selY, fields);
 
             if (moves.find(move => move[0] == x && move[1] == y) != null) {
-                console.log(`Move [${fields[selX][selY].piece.color} :: ${fields[selX][selY].piece.piece}] from ${selX}, ${selY} to ${x}, ${y}`);
-                onMove(selX, selY, x, y);
-                clearHighlights();
-                return;
+                //console.log(`Move [${fields[selX][selY].piece.color} :: ${fields[selX][selY].piece.piece}] from ${selX}, ${selY} to ${x}, ${y}`);
+                if (fields[selX][selY].piece.color != fields[x][y].piece.color) {
+                    onMove(selX, selY, x, y);
+                    clearHighlights();
+                    return;
+                }
             }
         }
 
         clearHighlights();
+        if (fields[x][y].piece.color != userColor && fields[x][y].piece.color != NO_COLOR) return;
+
         const piece = fields[x][y].piece;
         if (piece.piece != -1) {
             const newFields = Array.from(fields);
@@ -119,6 +179,7 @@ export default function ChessBoard({style, className, backendSocketUrl}: {style?
                 newFields[i][j].selected = false;
             }
         }
+
         setFields(newFields);
     }
 
