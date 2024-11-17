@@ -30,14 +30,17 @@ export default function ChessBoard({style, className, backendSocketUrl, botId}: 
 
     const userColor = WHITE;
 
+    const makeSocket = (): WebSocket => {
+        return new WebSocket(backendSocketUrl);
+    }
+
     const init = () => {
         stompClient?.disconnect();
 
         clearHighlights();
         clearPieces();
 
-        const socket = new WebSocket(backendSocketUrl);
-        const newStompClient = Stomp.over(socket);
+        const newStompClient = Stomp.over(makeSocket);
         newStompClient.debug = function() { }
 
         newStompClient.connect({}, () => {

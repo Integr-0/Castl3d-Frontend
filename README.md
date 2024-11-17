@@ -47,3 +47,16 @@ Contributions are welcome! Please open an issue or submit a pull request.
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## Using the board in your project
+
+To use the board in your project, you can import the `ChessBoard` component from the `ChessBoard.tsx` file. The component takes the following props:
+- `backendSocketUrl`: The URL of the backend server running a Castl3d backend to connect to.
+- `botId`: The ID of the bot to play against.
+
+````tsx
+<ChessBoard backendSocketUrl={"ws://yourapp.com/bot_socket"} botId={currentBot}/>
+````
+
+Backend runs on port 8080 by default. The bot ID can be obtained from the backend server. (see BotSelector.tsx for an example)
+It also uses the `/bot_socket` endpoint by default.

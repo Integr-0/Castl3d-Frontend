@@ -11,18 +11,38 @@
  * limitations under the License.
  */
 
-import React from "react";
+import React, {useEffect} from "react";
 
-export default function BotSelector({style, className, setCallback}: {style?: React.CSSProperties | undefined, className?: string | undefined, setCallback: (bot: string) => void}) {
+export interface Bot {
+    id: string,
+    name: string
+}
+
+export default function BotSelector({style, className, backendEndpoint, setCallback}: {style?: React.CSSProperties | undefined, className?: string | undefined, backendEndpoint: string, setCallback: (bot: string) => void}) {
     const [bot, setBot] = React.useState<string>("easy_default");
+    const [bots, setBots] = React.useState<Bot[]>([]);
+
+    const fetchBots = async () => {
+        const response = await fetch(backendEndpoint);
+        const data = await response.json();
+        setBots(data.bots);
+    }
+
+    useEffect(() => {
+        fetchBots().catch(console.error);
+    }, [backendEndpoint]);
+    
+    const constructOptions = () => {
+        return bots.map((bot, index) => {
+            return <option key={index} value={bot.id}>{bot.name}</option>
+        });
+    }
 
     return (
         <div className={className} style={style}>
             <div className="bot_selector">
                 <select onChange={e => setBot(e.target.value)}>
-                    <option value="easy_default">Easy</option>
-                    <option value="medium_default">Medium</option>
-                    <option value="hard_default">Hard</option>
+                    {constructOptions()}
                 </select>
 
                 <button onClick={() => setCallback(bot)}>Play</button>

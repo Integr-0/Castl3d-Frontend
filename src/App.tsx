@@ -21,7 +21,7 @@ function App() {
         <>
             <div className="center">
                 <ChessBoard backendSocketUrl={"ws://localhost:8080/bot_socket"} botId={currentBot}/>
-                <BotSelector setCallback={selectedBot => setCurrentBot(selectedBot)}/>
+                <BotSelector backendEndpoint={"http://localhost:8080/bots"} setCallback={selectedBot => setCurrentBot(selectedBot)}/>
             </div>
         </>
     )
