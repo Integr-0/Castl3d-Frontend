@@ -35,7 +35,7 @@ This project is a chess game frontend implemented using TypeScript and React. It
 
 1. Start the development server:
     ```sh
-    npm start
+    npm run dev
     ```
 2. Open your browser and navigate to `http://localhost:5173` to see the frontend.
 3. To run the backend server, navigate to the [Castl3d-Backend](https://github.com/Integr-0/Castl3d-Backend) directory and follow the instructions in the README.
