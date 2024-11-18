@@ -37,7 +37,7 @@ export function getValidMovesPawn(x: number, y: number, boardContext: ChessField
     const moves = [];
     if (y == 6) {
         if (boardContext[x][y-1].piece.piece == NONE) moves.push([x, y-1]);
-        if (boardContext[x][y-2].piece.piece == NONE) moves.push([x, y-2]);
+        if (boardContext[x][y-1].piece.piece == NONE && boardContext[x][y-2].piece.piece == NONE) moves.push([x, y-2]);
     } else if (y > 0){
         if (boardContext[x][y-1].piece.piece == NONE) moves.push([x, y-1]);
     }
